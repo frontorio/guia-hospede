@@ -1,0 +1,146 @@
+// Prisma schema para a API de imóveis de hospedagem.
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Imóvel de hospedagem. Agrega dados básicos, endereço, informações
+/// operacionais/de acesso, regras da estadia, amenidades e o anfitrião.
+model Property {
+  id               String   @id @default(uuid())
+  /// Código de negócio único do imóvel (ex.: "FLN001").
+  code             String   @unique
+  name             String
+  propertyType     String   @map("property_type")
+  bedroomQuantity  Int      @map("bedroom_quantity")
+  bathroomQuantity Int      @map("bathroom_quantity")
+  guestCapacity    Int      @map("guest_capacity")
+  /// URLs das fotos do imóvel (array nativo do PostgreSQL).
+  images           String[]
+
+  address     Address?
+  operational Operational?
+  rules       StayRules?
+  amenities   Amenities?
+  host        Host?
+  guidebook   Guidebook?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("properties")
+}
+
+/// Endereço completo do imóvel.
+model Address {
+  id           String  @id @default(uuid())
+  street       String
+  number       String
+  complement   String?
+  neighborhood String
+  city         String
+  state        String
+  postalCode   String  @map("postal_code")
+
+  propertyId String   @unique @map("property_id")
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("addresses")
+}
+
+/// Informações operacionais e de acesso (WiFi, entrada, estacionamento).
+model Operational {
+  id                          String  @id @default(uuid())
+  wifiNetwork                 String? @map("wifi_network")
+  wifiPassword                String? @map("wifi_password")
+  isSelfCheckin               Boolean @default(false) @map("is_self_checkin")
+  propertyAccessType          String? @map("property_access_type")
+  propertyAccessInstructions  String? @map("property_access_instructions")
+  propertyPassword            String? @map("property_password")
+  hasParkingSpot              Boolean @default(false) @map("has_parking_spot")
+  parkingSpotIdentifier       String? @map("parking_spot_identifier")
+  parkingSpotInstructions     String? @map("parking_spot_instructions")
+
+  propertyId String   @unique @map("property_id")
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("operational_info")
+}
+
+/// Regras da estadia: horários e políticas.
+model StayRules {
+  id                  String  @id @default(uuid())
+  checkInTime         String  @map("check_in_time")
+  checkOutTime        String  @map("check_out_time")
+  allowPet            Boolean @default(false) @map("allow_pet")
+  smokingPermitted    Boolean @default(false) @map("smoking_permitted")
+  suitableForChildren Boolean @default(true) @map("suitable_for_children")
+  suitableForBabies   Boolean @default(true) @map("suitable_for_babies")
+  eventsPermitted     Boolean @default(false) @map("events_permitted")
+
+  propertyId String   @unique @map("property_id")
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("stay_rules")
+}
+
+/// Amenidades disponíveis no imóvel.
+model Amenities {
+  id              String  @id @default(uuid())
+  wifi            Boolean @default(false)
+  tv              Boolean @default(false)
+  airConditioning Boolean @default(false) @map("air_conditioning")
+  kitchen         Boolean @default(false)
+  washingMachine  Boolean @default(false) @map("washing_machine")
+  elevator        Boolean @default(false)
+  balcony         Boolean @default(false)
+  pool            Boolean @default(false)
+  parking         Boolean @default(false)
+  bbqGrill        Boolean @default(false) @map("bbq_grill")
+  dishwasher      Boolean @default(false)
+
+  propertyId String   @unique @map("property_id")
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("amenities")
+}
+
+/// Guia de experiências do imóvel gerado por IA (agente + LLM via OpenRouter).
+/// As listas ficam em colunas JSON (jsonb) por serem conteúdo gerado.
+model Guidebook {
+  id             String   @id @default(uuid())
+  welcomeMessage String   @map("welcome_message")
+  /// Array de { name, distance, description }
+  restaurants    Json     @default("[]")
+  /// Array de { name, distance, description }
+  attractions    Json     @default("[]")
+  /// Array de { name, type, distance, description }
+  essentials     Json     @default("[]")
+  seasonalTips   String   @map("seasonal_tips")
+  /// Modelo de LLM que gerou o guia (para rastreabilidade).
+  model          String?
+  generatedAt    DateTime @default(now()) @map("generated_at")
+
+  propertyId String   @unique @map("property_id")
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("guidebooks")
+}
+
+/// Dados de contato do anfitrião.
+model Host {
+  id    String @id @default(uuid())
+  name  String
+  phone String
+
+  propertyId String   @unique @map("property_id")
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("hosts")
+}

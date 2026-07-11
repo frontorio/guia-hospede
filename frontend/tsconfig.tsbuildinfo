@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/api/client.ts","./src/api/properties.ts","./src/api/types.ts","./src/components/feedback.tsx","./src/components/layout.tsx","./src/pages/propertieslistpage.tsx","./src/pages/propertydetailpage.tsx","./src/pages/propertyformpage.tsx"],"errors":true,"version":"5.9.3"}

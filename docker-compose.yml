@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: guia-hospede-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: guiahospede
+      POSTGRES_PASSWORD: guiahospede
+      POSTGRES_DB: guiahospede
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U guiahospede -d guiahospede']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: guia-hospede-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://guiahospede:guiahospede@db:5432/guiahospede?schema=public
+      PORT: 3000
+      # Guia de experiências por IA (lidos do seu .env local).
+      LLM_MODEL: ${LLM_MODEL:-openrouter:openai/gpt-oss-120b:free}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+    ports:
+      - '3000:3000'
+
+volumes:
+  postgres_data:
