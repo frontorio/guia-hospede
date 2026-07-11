@@ -33,6 +33,9 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 > Detalhes do painel: [frontend/README.md](frontend/README.md).
 > O restante deste documento descreve a **API (backend)**.
 
+> 🚀 **Deploy público (gratuito)** com Neon + Render + Vercel: veja
+> [DEPLOY.md](DEPLOY.md).
+
 ---
 
 ## 🧱 Stack

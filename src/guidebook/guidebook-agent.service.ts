@@ -91,10 +91,13 @@ export class GuidebookAgentService {
     this.logger.log(
       `Gerando guia para "${context.name}" (${context.address.city}/${context.address.state})`,
     );
+    // Teto de tokens controlado por env (LLM_MAX_TOKENS, default 6000): modelos
+    // de "reasoning" gastam parte do orçamento pensando antes de emitir o JSON.
+    // Com pouco espaço o guia era cortado (finish_reason "length"); com folga
+    // ele termina naturalmente ("stop").
     const raw = await this.llm.chat(messages, {
       json: true,
       temperature: 0.7,
-      maxTokens: 2000,
     });
     return this.parse(raw);
   }

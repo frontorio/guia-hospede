@@ -55,6 +55,17 @@ export class OpenRouterService {
       : raw;
   }
 
+  /**
+   * Teto padrão de tokens de saída (env `LLM_MAX_TOKENS`, default 6000).
+   * Usado quando a chamada não especifica `maxTokens`. Precisa ser alto o
+   * suficiente para modelos de "reasoning" não cortarem a resposta.
+   */
+  get maxTokens(): number {
+    const raw = this.config.get<string>('LLM_MAX_TOKENS');
+    const n = raw ? Number(raw) : NaN;
+    return Number.isFinite(n) && n > 0 ? n : 6000;
+  }
+
   private async getClient(): Promise<any> {
     if (this.client) return this.client;
 
@@ -83,11 +94,9 @@ export class OpenRouterService {
         chatRequest: {
           model: this.model,
           messages,
+          maxTokens: opts.maxTokens ?? this.maxTokens,
           ...(opts.temperature !== undefined
             ? { temperature: opts.temperature }
-            : {}),
-          ...(opts.maxTokens !== undefined
-            ? { maxTokens: opts.maxTokens }
             : {}),
           ...(opts.json ? { responseFormat: { type: 'json_object' } } : {}),
         },
@@ -116,11 +125,9 @@ export class OpenRouterService {
           model: this.model,
           messages,
           stream: true,
+          maxTokens: opts.maxTokens ?? this.maxTokens,
           ...(opts.temperature !== undefined
             ? { temperature: opts.temperature }
-            : {}),
-          ...(opts.maxTokens !== undefined
-            ? { maxTokens: opts.maxTokens }
             : {}),
         },
       });
