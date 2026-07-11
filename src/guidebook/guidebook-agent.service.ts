@@ -1,5 +1,5 @@
 import { Injectable, Logger, UnprocessableEntityException } from '@nestjs/common';
-import { ChatMessage, OpenRouterService } from './llm/openrouter.service';
+import { ChatMessage, OpenRouterService } from '../llm/openrouter.service';
 
 /** Endereço mínimo necessário para contextualizar o guia. */
 export interface GuidebookAddress {

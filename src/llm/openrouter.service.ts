@@ -31,8 +31,8 @@ export interface ChatOptions {
 }
 
 /**
- * Cliente fino sobre o OpenRouter SDK. Isola a dependência ESM e expõe um
- * método `chat` simples que devolve o texto da resposta.
+ * Cliente fino sobre o OpenRouter SDK. Isola a dependência ESM e expõe
+ * métodos de chat (bloqueante e por streaming).
  */
 @Injectable()
 export class OpenRouterService {
@@ -61,7 +61,7 @@ export class OpenRouterService {
     const apiKey = this.config.get<string>('OPENROUTER_API_KEY');
     if (!apiKey) {
       throw new ServiceUnavailableException(
-        'OPENROUTER_API_KEY não configurada; a geração do guia por IA está indisponível.',
+        'OPENROUTER_API_KEY não configurada; a integração com IA está indisponível.',
       );
     }
 
@@ -101,10 +101,43 @@ export class OpenRouterService {
   }
 
   /**
-   * Converte erros do SDK do OpenRouter em exceções HTTP determinísticas,
-   * preservando o status de origem (ex.: 429 de rate-limit) quando possível.
+   * Abre um stream de chat. Retorna um iterável assíncrono de chunks já com a
+   * chamada estabelecida — assim erros iniciais (ex.: 429) são lançados ANTES
+   * de qualquer escrita na resposta HTTP. Use `extractDelta` em cada chunk.
    */
-  private translateError(error: unknown): HttpException {
+  async openStream(
+    messages: ChatMessage[],
+    opts: ChatOptions = {},
+  ): Promise<AsyncIterable<any>> {
+    const client = await this.getClient();
+    try {
+      return await client.chat.send({
+        chatRequest: {
+          model: this.model,
+          messages,
+          stream: true,
+          ...(opts.temperature !== undefined
+            ? { temperature: opts.temperature }
+            : {}),
+          ...(opts.maxTokens !== undefined
+            ? { maxTokens: opts.maxTokens }
+            : {}),
+        },
+      });
+    } catch (error) {
+      throw this.translateError(error);
+    }
+  }
+
+  /** Extrai o texto incremental (delta) de um chunk de streaming. */
+  extractDelta(chunk: any): string {
+    return this.coerceContent(chunk?.choices?.[0]?.delta?.content);
+  }
+
+  /** Converte erros do SDK em `HttpException` (traduz o erro para status HTTP). */
+  translateError(error: unknown): HttpException {
+    if (error instanceof HttpException) return error;
+
     const err = error as {
       statusCode?: number;
       message?: string;
@@ -121,14 +154,17 @@ export class OpenRouterService {
           HttpStatus.TOO_MANY_REQUESTS,
         );
       }
-      if (status === HttpStatus.UNAUTHORIZED || status === HttpStatus.FORBIDDEN) {
+      if (
+        status === HttpStatus.UNAUTHORIZED ||
+        status === HttpStatus.FORBIDDEN
+      ) {
         return new HttpException(
           'Credenciais do OpenRouter inválidas ou sem permissão.',
           HttpStatus.BAD_GATEWAY,
         );
       }
       return new HttpException(
-        `Falha ao gerar o guia via LLM (${status}): ${detail}`,
+        `Falha ao chamar a LLM (${status}): ${detail}`,
         HttpStatus.BAD_GATEWAY,
       );
     }
@@ -140,9 +176,7 @@ export class OpenRouterService {
   }
 
   /** Extrai a mensagem do provedor do corpo JSON de erro, se houver. */
-  private extractProviderMessage(err: {
-    body?: string;
-  }): string | undefined {
+  private extractProviderMessage(err: { body?: string }): string | undefined {
     if (!err?.body) return undefined;
     try {
       const parsed = JSON.parse(err.body);

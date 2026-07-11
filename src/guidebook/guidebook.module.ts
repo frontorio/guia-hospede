@@ -1,18 +1,14 @@
 import { Module } from '@nestjs/common';
+import { LlmModule } from '../llm/llm.module';
 import { GuidebookAgentService } from './guidebook-agent.service';
 import { GuidebookController } from './guidebook.controller';
 import { GuidebookListener } from './guidebook.listener';
 import { GuidebookService } from './guidebook.service';
-import { OpenRouterService } from './llm/openrouter.service';
 
 @Module({
+  imports: [LlmModule],
   controllers: [GuidebookController],
-  providers: [
-    OpenRouterService,
-    GuidebookAgentService,
-    GuidebookService,
-    GuidebookListener,
-  ],
+  providers: [GuidebookAgentService, GuidebookService, GuidebookListener],
   exports: [GuidebookService],
 })
 export class GuidebookModule {}

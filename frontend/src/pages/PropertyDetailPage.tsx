@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 import { usePropertyByCode } from '../api/properties';
+import { ChatWidget } from '../components/ChatWidget';
 import { EmptyState, ErrorBanner, Spinner } from '../components/Feedback';
 import type {
   Amenities,
@@ -125,6 +126,8 @@ export function PropertyDetailPage() {
       </div>
 
       <GuidebookSection guidebook={property.guidebook} />
+
+      <ChatWidget propertyId={property.id} propertyName={property.name} />
     </div>
   );
 }

@@ -1,0 +1,6 @@
+# Normaliza fins de linha no repositório (armazena LF).
+* text=auto
+
+# Scripts shell DEVEM usar LF (CRLF quebra o shebang no container Linux).
+*.sh text eol=lf
+docker-entrypoint.sh text eol=lf

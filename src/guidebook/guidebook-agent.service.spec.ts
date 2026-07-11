@@ -1,6 +1,6 @@
 import { UnprocessableEntityException } from '@nestjs/common';
 import { GuidebookAgentService, GuidebookContext } from './guidebook-agent.service';
-import { OpenRouterService } from './llm/openrouter.service';
+import { OpenRouterService } from '../llm/openrouter.service';
 
 const context: GuidebookContext = {
   name: 'Apartamento Beira-Mar Florianópolis',
