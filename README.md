@@ -1,12 +1,37 @@
-# Guia Hóspede API
+# Guia Hóspede
 
-API REST para **gerenciamento de imóveis de hospedagem**. Permite cadastrar,
-listar, consultar e atualizar imóveis com todas as informações necessárias
-para receber um hóspede: dados do imóvel, informações de acesso (WiFi,
-fechadura, estacionamento), regras da estadia e contato do anfitrião.
+Solução para **gerenciamento de imóveis de hospedagem** com **guia de
+experiências gerado por IA**. O repositório contém **dois projetos**:
 
-Construída com **NestJS + TypeScript**, **Prisma** (PostgreSQL), documentada
-com **Swagger/OpenAPI** e testada com **Jest**.
+| Parte                 | Local                        | Stack                                    | Documentação                              |
+| --------------------- | ---------------------------- | ---------------------------------------- | ----------------------------------------- |
+| **API (backend)**     | raiz deste repositório       | NestJS · Prisma · PostgreSQL · Swagger   | este README                               |
+| **Painel (frontend)** | [`frontend/`](frontend/)     | React · Vite · TypeScript · Tailwind     | [frontend/README.md](frontend/README.md)  |
+
+A API expõe endpoints REST (GET/POST/PUT) para os imóveis e, a cada criação ou
+edição, um **agente de IA** consulta uma LLM (via OpenRouter) para gerar e
+persistir um guia contextualizado do bairro/cidade. O painel consome essa API.
+
+### Arquitetura
+
+```
+Navegador ──▶ Frontend (React/Vite :5173) ──HTTP/JSON──▶ API (NestJS :3000) ──▶ PostgreSQL
+                                                              │
+                                                              └─ Agente IA ──▶ OpenRouter (LLM)
+```
+
+### Início rápido (os dois juntos)
+
+```bash
+# 1) API + banco de dados (Docker)
+docker compose up --build            # http://localhost:3000  ·  Swagger em /docs
+
+# 2) Painel (em outro terminal)
+cd frontend && npm install && npm run dev   # http://localhost:5173
+```
+
+> Detalhes do painel: [frontend/README.md](frontend/README.md).
+> O restante deste documento descreve a **API (backend)**.
 
 ---
 
@@ -26,7 +51,7 @@ com **Swagger/OpenAPI** e testada com **Jest**.
 
 ---
 
-## 📁 Estrutura do projeto
+## 📁 Estrutura do repositório
 
 ```
 .
@@ -34,17 +59,13 @@ com **Swagger/OpenAPI** e testada com **Jest**.
 │   ├── schema.prisma          # Modelo de dados (normalizado)
 │   └── seed.ts                # Popula o imóvel de exemplo (FLN001)
 ├── src/
-│   ├── main.ts                # Bootstrap + configuração do Swagger
+│   ├── main.ts                # Bootstrap + Swagger + CORS
 │   ├── app.module.ts
 │   ├── health/                # Endpoint de health check
 │   ├── prisma/                # PrismaService + PrismaModule (global)
-│   └── properties/
-│       ├── dto/               # DTOs de entrada com validação e Swagger
-│       ├── entities/          # Entidade de resposta (documentação Swagger)
-│       ├── properties.controller.ts
-│       ├── properties.service.ts
-│       ├── properties.mapper.ts   # Conversão snake_case ⇆ camelCase
-│       └── *.spec.ts          # Testes unitários (Jest)
+│   ├── properties/            # CRUD de imóveis (controller/service/dto/mapper)
+│   └── guidebook/             # Agente de IA + guidebook (LLM, service, listener)
+├── frontend/                  # 👉 Painel React (SPA) — ver frontend/README.md
 ├── Dockerfile                 # Build multi-stage
 ├── docker-compose.yml         # API + PostgreSQL
 ├── docker-entrypoint.sh       # Aplica schema e sobe a API
