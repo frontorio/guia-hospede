@@ -42,7 +42,8 @@ async function bootstrap() {
   });
 
   const port = process.env.PORT ? Number(process.env.PORT) : 3000;
-  await app.listen(port);
+  // Bind em 0.0.0.0 é exigido por plataformas como Render/containers.
+  await app.listen(port, '0.0.0.0');
   // eslint-disable-next-line no-console
   console.log(`🚀 API em http://localhost:${port}/api`);
   // eslint-disable-next-line no-console

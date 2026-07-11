@@ -1,0 +1,28 @@
+# Render Blueprint — API (NestJS via Docker).
+# Deploy: em https://dashboard.render.com → New → Blueprint → aponte para este repo.
+# As variáveis com `sync: false` devem ser preenchidas no painel (não vão pro git).
+services:
+  - type: web
+    name: guia-hospede-api
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # String de conexão do Neon (inclua ?sslmode=require).
+      - key: DATABASE_URL
+        sync: false
+      # Chave da API do OpenRouter.
+      - key: OPENROUTER_API_KEY
+        sync: false
+      # Origem(ns) permitida(s) no CORS = URL do frontend na Vercel.
+      # Aceita várias separadas por vírgula.
+      - key: CORS_ORIGIN
+        sync: false
+      - key: LLM_MODEL
+        value: nvidia/nemotron-3-ultra-550b-a55b:free
+      - key: OPENROUTER_BASE_URL
+        value: https://openrouter.ai/api/v1
