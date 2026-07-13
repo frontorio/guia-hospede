@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { PropertyAccessType } from '@prisma/client';
+import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
 
 export class OperationalDto {
   @ApiPropertyOptional({ example: 'SeaHome_FLN001' })
@@ -17,12 +18,14 @@ export class OperationalDto {
   is_self_checkin: boolean;
 
   @ApiPropertyOptional({
-    example: 'smart_lock',
-    description: 'Tipo de acesso: smart_lock, key_safe, reception, etc.',
+    enum: PropertyAccessType,
+    example: PropertyAccessType.smart_lock,
+    description:
+      'Tipo de acesso: key_safe (cofre de chaves), smart_lock, bluetooth_app, tag.',
   })
   @IsOptional()
-  @IsString()
-  property_access_type?: string;
+  @IsEnum(PropertyAccessType)
+  property_access_type?: PropertyAccessType;
 
   @ApiPropertyOptional({
     example: 'Use o código 4521 na fechadura eletrônica',

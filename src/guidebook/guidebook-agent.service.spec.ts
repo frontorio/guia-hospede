@@ -1,5 +1,8 @@
 import { UnprocessableEntityException } from '@nestjs/common';
-import { GuidebookAgentService, GuidebookContext } from './guidebook-agent.service';
+import {
+  GuidebookAgentService,
+  GuidebookContext,
+} from './guidebook-agent.service';
 import { OpenRouterService } from '../llm/openrouter.service';
 
 const context: GuidebookContext = {
@@ -20,7 +23,11 @@ const validJson = JSON.stringify({
     { name: 'Box 32', distance: 'Aprox. 1,2 km', description: 'Boteco.' },
   ],
   attractions: [
-    { name: 'Praia da Joaquina', distance: 'Aprox. 18 km', description: 'Surf.' },
+    {
+      name: 'Praia da Joaquina',
+      distance: 'Aprox. 18 km',
+      description: 'Surf.',
+    },
   ],
   essentials: [
     {
@@ -44,7 +51,10 @@ describe('GuidebookAgentService', () => {
 
   describe('buildMessages', () => {
     it('inclui endereço, imóvel e contexto sazonal no prompt', () => {
-      const messages = agent.buildMessages(context, new Date('2026-07-11T12:00:00Z'));
+      const messages = agent.buildMessages(
+        context,
+        new Date('2026-07-11T12:00:00Z'),
+      );
       const user = messages.find((m) => m.role === 'user')!.content;
 
       expect(messages[0].role).toBe('system');
@@ -60,7 +70,10 @@ describe('GuidebookAgentService', () => {
     it('chama a LLM em modo JSON e devolve a estrutura parseada', async () => {
       llm.chat.mockResolvedValue(validJson);
 
-      const data = await agent.generate(context, new Date('2026-07-11T12:00:00Z'));
+      const data = await agent.generate(
+        context,
+        new Date('2026-07-11T12:00:00Z'),
+      );
 
       expect(llm.chat).toHaveBeenCalledWith(
         expect.any(Array),
@@ -74,7 +87,8 @@ describe('GuidebookAgentService', () => {
 
   describe('parse', () => {
     it('extrai JSON de resposta cercada por markdown (```json)', () => {
-      const raw = 'Claro!\n```json\n' + validJson + '\n```\nEspero ter ajudado.';
+      const raw =
+        'Claro!\n```json\n' + validJson + '\n```\nEspero ter ajudado.';
       const data = agent.parse(raw);
       expect(data.welcome_message).toBe('Bem-vindo à Trindade!');
       expect(data.attractions[0].name).toBe('Praia da Joaquina');

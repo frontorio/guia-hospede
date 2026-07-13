@@ -55,7 +55,8 @@ export class PropertyEntity {
   @ApiProperty({
     type: GuidebookEntity,
     nullable: true,
-    description: 'Guia de experiências gerado por IA (null se ainda não gerado).',
+    description:
+      'Guia de experiências gerado por IA (null se ainda não gerado).',
   })
   guidebook: GuidebookEntity | null;
 

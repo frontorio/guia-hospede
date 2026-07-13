@@ -2,7 +2,10 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { GuidebookAgentService, GuidebookData } from './guidebook-agent.service';
+import {
+  GuidebookAgentService,
+  GuidebookData,
+} from './guidebook-agent.service';
 import { GuidebookService } from './guidebook.service';
 import { PrismaService } from '../prisma/prisma.service';
 

@@ -1,5 +1,4 @@
-const API_URL =
-  import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
 
 /** Erro de API com status e mensagem legível vinda do backend. */
 export class ApiError extends Error {

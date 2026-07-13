@@ -14,10 +14,9 @@ import { ConfigService } from '@nestjs/config';
  * `ERR_REQUIRE_ESM`. Envolvê-lo em `new Function` impede o TypeScript de
  * rebaixar o `import()` para `require()`.
  */
-const importEsm = new Function(
-  'specifier',
-  'return import(specifier)',
-) as (specifier: string) => Promise<any>;
+const importEsm = new Function('specifier', 'return import(specifier)') as (
+  specifier: string,
+) => Promise<any>;
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';

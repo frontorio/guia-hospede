@@ -10,11 +10,14 @@ export interface Address {
   postal_code: string;
 }
 
+export type PropertyAccessType =
+  'key_safe' | 'smart_lock' | 'bluetooth_app' | 'tag';
+
 export interface Operational {
   wifi_network?: string | null;
   wifi_password?: string | null;
   is_self_checkin: boolean;
-  property_access_type?: string | null;
+  property_access_type?: PropertyAccessType | null;
   property_access_instructions?: string | null;
   property_password?: string | null;
   has_parking_spot: boolean;

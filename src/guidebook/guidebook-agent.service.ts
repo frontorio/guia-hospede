@@ -1,4 +1,8 @@
-import { Injectable, Logger, UnprocessableEntityException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { ChatMessage, OpenRouterService } from '../llm/openrouter.service';
 
 /** Endereço mínimo necessário para contextualizar o guia. */
@@ -161,7 +165,9 @@ export class GuidebookAgentService {
     try {
       obj = JSON.parse(jsonText);
     } catch {
-      this.logger.error(`Resposta da LLM não é JSON válido: ${raw.slice(0, 200)}`);
+      this.logger.error(
+        `Resposta da LLM não é JSON válido: ${raw.slice(0, 200)}`,
+      );
       throw new UnprocessableEntityException(
         'A LLM não retornou um JSON válido para o guia.',
       );

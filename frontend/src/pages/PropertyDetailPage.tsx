@@ -1,17 +1,23 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { usePropertyByCode } from '../api/properties';
 import { ChatWidget } from '../components/ChatWidget';
+import { Lightbox } from '../components/Lightbox';
 import { EmptyState, ErrorBanner, Spinner } from '../components/Feedback';
+import { accessTypeLabel } from '../lib/accessTypes';
+import { formatPhoneDisplay } from '../lib/phone';
 import type {
   Amenities,
   EssentialItem,
   Guidebook,
   GuideItem,
+  Operational,
 } from '../api/types';
 
 export function PropertyDetailPage() {
   const { code } = useParams();
   const { property, isLoading, isError, error } = usePropertyByCode(code);
+  const [lightbox, setLightbox] = useState<number | null>(null);
 
   if (isLoading) return <Spinner label="Carregando imóvel..." />;
   if (isError) return <ErrorBanner message={(error as Error).message} />;
@@ -22,6 +28,8 @@ export function PropertyDetailPage() {
         description={`Nenhum imóvel com o código "${code}".`}
       />
     );
+
+  const phone = formatPhoneDisplay(property.host.phone);
 
   return (
     <div className="space-y-6">
@@ -40,12 +48,18 @@ export function PropertyDetailPage() {
       {property.images.length > 0 && (
         <div className="flex gap-3 overflow-x-auto">
           {property.images.map((src, i) => (
-            <img
+            <button
               key={i}
-              src={src}
-              alt={`Foto ${i + 1}`}
-              className="h-40 w-64 shrink-0 rounded-lg object-cover"
-            />
+              onClick={() => setLightbox(i)}
+              className="shrink-0 overflow-hidden rounded-lg"
+              aria-label={`Abrir foto ${i + 1} em tela cheia`}
+            >
+              <img
+                src={src}
+                alt={`Foto ${i + 1}`}
+                className="h-40 w-64 cursor-pointer object-cover transition hover:opacity-90"
+              />
+            </button>
           ))}
         </div>
       )}
@@ -71,31 +85,7 @@ export function PropertyDetailPage() {
         </InfoCard>
 
         <InfoCard title="Acesso e operacional">
-          <Row label="WiFi" value={property.operational.wifi_network ?? '—'} />
-          <Row
-            label="Senha WiFi"
-            value={property.operational.wifi_password ?? '—'}
-          />
-          <Row
-            label="Check-in autônomo"
-            value={property.operational.is_self_checkin ? 'Sim' : 'Não'}
-          />
-          <Row
-            label="Tipo de acesso"
-            value={property.operational.property_access_type ?? '—'}
-          />
-          <Row
-            label="Instruções"
-            value={property.operational.property_access_instructions ?? '—'}
-          />
-          <Row
-            label="Estacionamento"
-            value={
-              property.operational.has_parking_spot
-                ? (property.operational.parking_spot_identifier ?? 'Sim')
-                : 'Não'
-            }
-          />
+          <OperationalRows operational={property.operational} />
         </InfoCard>
 
         <InfoCard title="Regras da estadia">
@@ -121,30 +111,80 @@ export function PropertyDetailPage() {
 
         <InfoCard title="Anfitrião">
           <Row label="Nome" value={property.host.name} />
-          <Row label="Telefone" value={property.host.phone} />
+          <div className="flex justify-between gap-4 py-0.5 text-sm">
+            <span className="text-slate-500">Telefone</span>
+            {phone ? (
+              <a
+                href={phone.whatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-right font-medium text-brand-600 hover:underline"
+                title="Abrir no WhatsApp"
+              >
+                {phone.flag} {phone.text} <span aria-hidden>💬</span>
+              </a>
+            ) : (
+              <span className="text-right font-medium text-slate-800">—</span>
+            )}
+          </div>
         </InfoCard>
       </div>
 
       <GuidebookSection guidebook={property.guidebook} />
 
       <ChatWidget propertyId={property.id} propertyName={property.name} />
+
+      {lightbox !== null && (
+        <Lightbox
+          images={property.images}
+          startIndex={lightbox}
+          onClose={() => setLightbox(null)}
+        />
+      )}
     </div>
   );
 }
 
-/* ---------- Seção do guidebook (somente leitura) ---------- */
+/* ---------- Operacional: mostra todos os campos preenchidos ---------- */
+
+function OperationalRows({ operational: o }: { operational: Operational }) {
+  return (
+    <>
+      <OptionalRow label="Rede WiFi" value={o.wifi_network} />
+      <OptionalRow label="Senha WiFi" value={o.wifi_password} />
+      <Row
+        label="Check-in autônomo"
+        value={o.is_self_checkin ? 'Sim' : 'Não'}
+      />
+      <OptionalRow
+        label="Tipo de acesso"
+        value={accessTypeLabel(o.property_access_type)}
+      />
+      <OptionalRow
+        label="Instruções de acesso"
+        value={o.property_access_instructions}
+      />
+      <OptionalRow label="Senha do imóvel" value={o.property_password} />
+      <Row
+        label="Possui estacionamento"
+        value={o.has_parking_spot ? 'Sim' : 'Não'}
+      />
+      <OptionalRow label="Vaga" value={o.parking_spot_identifier} />
+      <OptionalRow
+        label="Instruções de estacionamento"
+        value={o.parking_spot_instructions}
+      />
+    </>
+  );
+}
+
+/* ---------- Guidebook (somente leitura) ---------- */
 
 function GuidebookSection({ guidebook }: { guidebook: Guidebook | null }) {
   return (
     <section className="card p-5">
       <div className="mb-4">
         <h2 className="text-lg font-semibold">✨ Guia de experiências (IA)</h2>
-        {guidebook?.model && (
-          <p className="text-xs text-slate-400">
-            Gerado por {guidebook.model} ·{' '}
-            {new Date(guidebook.generated_at).toLocaleString('pt-BR')}
-          </p>
-        )}
       </div>
 
       {!guidebook ? (
@@ -250,6 +290,18 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
       <span className="text-right font-medium text-slate-800">{value}</span>
     </div>
   );
+}
+
+/** Renderiza a linha apenas se o valor estiver preenchido. */
+function OptionalRow({
+  label,
+  value,
+}: {
+  label: string;
+  value?: string | null;
+}) {
+  if (!value || value.trim() === '') return null;
+  return <Row label={label} value={value} />;
 }
 
 function Policy({ ok, label }: { ok: boolean; label: string }) {

@@ -54,13 +54,21 @@ model Address {
   @@map("addresses")
 }
 
+/// Tipos de acesso ao imóvel.
+enum PropertyAccessType {
+  key_safe // Cofre de chaves
+  smart_lock // Smart lock
+  bluetooth_app // Bluetooth/App
+  tag // Tag
+}
+
 /// Informações operacionais e de acesso (WiFi, entrada, estacionamento).
 model Operational {
   id                          String  @id @default(uuid())
   wifiNetwork                 String? @map("wifi_network")
   wifiPassword                String? @map("wifi_password")
   isSelfCheckin               Boolean @default(false) @map("is_self_checkin")
-  propertyAccessType          String? @map("property_access_type")
+  propertyAccessType          PropertyAccessType? @map("property_access_type")
   propertyAccessInstructions  String? @map("property_access_instructions")
   propertyPassword            String? @map("property_password")
   hasParkingSpot              Boolean @default(false) @map("has_parking_spot")

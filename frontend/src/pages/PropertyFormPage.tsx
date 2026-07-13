@@ -1,5 +1,5 @@
 import { forwardRef, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   useCreateProperty,
@@ -7,7 +7,18 @@ import {
   useUpdateProperty,
 } from '../api/properties';
 import { ErrorBanner, Spinner } from '../components/Feedback';
+import { PhoneInput } from '../components/PhoneInput';
+import { ACCESS_TYPES } from '../lib/accessTypes';
 import type { Amenities, PropertyInput } from '../api/types';
+
+/** Mantém apenas dígitos. */
+const onlyDigits = (v: string) => v.replace(/\D/g, '');
+
+/** Formata CEP brasileiro: 8 dígitos → "#####-###". */
+function formatCep(v: string): string {
+  const d = onlyDigits(v).slice(0, 8);
+  return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
+}
 
 const emptyValues: PropertyInput = {
   code: '',
@@ -29,7 +40,7 @@ const emptyValues: PropertyInput = {
     wifi_network: '',
     wifi_password: '',
     is_self_checkin: false,
-    property_access_type: '',
+    property_access_type: undefined,
     property_access_instructions: '',
     property_password: '',
     has_parking_spot: false,
@@ -92,6 +103,7 @@ export function PropertyFormPage() {
     reset,
     watch,
     setValue,
+    control,
     formState: { errors },
   } = useForm<PropertyInput>({ defaultValues: emptyValues });
 
@@ -117,10 +129,16 @@ export function PropertyFormPage() {
   const images = watch('images');
 
   const onSubmit = handleSubmit(async (values) => {
-    // Remove URLs de imagem vazias antes de enviar.
     const payload: PropertyInput = {
       ...values,
+      // Remove URLs de imagem vazias antes de enviar.
       images: values.images.filter((url) => url.trim() !== ''),
+      operational: {
+        ...values.operational,
+        // "" (opção "Selecione") vira undefined — o enum não aceita string vazia.
+        property_access_type:
+          values.operational.property_access_type || undefined,
+      },
     };
     const saved = isEdit
       ? await updateMut.mutateAsync(payload)
@@ -189,7 +207,10 @@ export function PropertyFormPage() {
               type="number"
               min={0}
               className="input"
-              {...register('bathroom_quantity', { valueAsNumber: true, min: 0 })}
+              {...register('bathroom_quantity', {
+                valueAsNumber: true,
+                min: 0,
+              })}
             />
           </Field>
           <Field label="Hóspedes (máx.)">
@@ -216,9 +237,19 @@ export function PropertyFormPage() {
           </div>
           <div className="sm:col-span-2">
             <Field label="Número" error={errors.address?.number?.message}>
-              <input
-                className="input"
-                {...register('address.number', { required: 'Obrigatório' })}
+              <Controller
+                control={control}
+                name="address.number"
+                rules={{ required: 'Obrigatório' }}
+                render={({ field }) => (
+                  <input
+                    className="input"
+                    inputMode="numeric"
+                    placeholder="589"
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(onlyDigits(e.target.value))}
+                  />
+                )}
               />
             </Field>
           </div>
@@ -259,10 +290,26 @@ export function PropertyFormPage() {
           </div>
           <div className="sm:col-span-2">
             <Field label="CEP" error={errors.address?.postal_code?.message}>
-              <input
-                className="input"
-                placeholder="88036-001"
-                {...register('address.postal_code', { required: 'Obrigatório' })}
+              <Controller
+                control={control}
+                name="address.postal_code"
+                rules={{
+                  required: 'Obrigatório',
+                  pattern: {
+                    value: /^\d{5}-\d{3}$/,
+                    message: 'CEP incompleto',
+                  },
+                }}
+                render={({ field }) => (
+                  <input
+                    className="input"
+                    inputMode="numeric"
+                    placeholder="88036-001"
+                    maxLength={9}
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(formatCep(e.target.value))}
+                  />
+                )}
               />
             </Field>
           </div>
@@ -273,17 +320,29 @@ export function PropertyFormPage() {
       <Section title="Acesso e operacional">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Rede WiFi">
-            <input className="input" {...register('operational.wifi_network')} />
-          </Field>
-          <Field label="Senha WiFi">
-            <input className="input" {...register('operational.wifi_password')} />
-          </Field>
-          <Field label="Tipo de acesso">
             <input
               className="input"
-              placeholder="smart_lock"
-              {...register('operational.property_access_type')}
+              {...register('operational.wifi_network')}
             />
+          </Field>
+          <Field label="Senha WiFi">
+            <input
+              className="input"
+              {...register('operational.wifi_password')}
+            />
+          </Field>
+          <Field label="Tipo de acesso">
+            <select
+              className="input"
+              {...register('operational.property_access_type')}
+            >
+              <option value="">Selecione...</option>
+              {ACCESS_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
           </Field>
           <Field label="Senha do imóvel">
             <input
@@ -426,10 +485,13 @@ export function PropertyFormPage() {
             />
           </Field>
           <Field label="Telefone" error={errors.host?.phone?.message}>
-            <input
-              className="input"
-              placeholder="+5548991234567"
-              {...register('host.phone', { required: 'Obrigatório' })}
+            <Controller
+              control={control}
+              name="host.phone"
+              rules={{ required: 'Obrigatório' }}
+              render={({ field }) => (
+                <PhoneInput value={field.value} onChange={field.onChange} />
+              )}
             />
           </Field>
         </div>

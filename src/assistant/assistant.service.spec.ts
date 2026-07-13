@@ -20,9 +20,7 @@ const property: any = {
   host: { name: 'Ana Paula', phone: '+5548991234567' },
   guidebook: {
     welcome_message: 'Bem-vindo!',
-    restaurants: [
-      { name: 'Box 32', distance: '1 km', description: 'Boteco' },
-    ],
+    restaurants: [{ name: 'Box 32', distance: '1 km', description: 'Boteco' }],
     attractions: [],
     essentials: [],
     seasonal_tips: 'Leve agasalho.',

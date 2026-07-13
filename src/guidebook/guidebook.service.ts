@@ -6,10 +6,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GuidebookAgentService } from './guidebook-agent.service';
-import {
-  GuidebookResponse,
-  toGuidebookResponse,
-} from './guidebook.mapper';
+import { GuidebookResponse, toGuidebookResponse } from './guidebook.mapper';
 
 export { GuidebookResponse } from './guidebook.mapper';
 

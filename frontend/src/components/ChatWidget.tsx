@@ -22,10 +22,29 @@ export function ChatWidget({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages, open]);
+
+  // Limpa o timer do efeito de digitação ao desmontar.
+  useEffect(
+    () => () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    },
+    [],
+  );
+
+  function setLastAssistant(content: string) {
+    setMessages((prev) => {
+      const next = [...prev];
+      const last = next[next.length - 1];
+      if (last?.role === 'assistant')
+        next[next.length - 1] = { ...last, content };
+      return next;
+    });
+  }
 
   async function send(text: string) {
     const question = text.trim();
@@ -33,7 +52,6 @@ export function ChatWidget({
 
     setError(null);
     setInput('');
-    // Histórico enviado à API = turnos concluídos até aqui.
     const history = messages;
     setMessages((prev) => [
       ...prev,
@@ -42,40 +60,61 @@ export function ChatWidget({
     ]);
     setBusy(true);
 
+    // Efeito de digitação: os chunks do stream entram num buffer (target) e
+    // são revelados progressivamente, caractere a caractere, como se alguém
+    // estivesse digitando — independente de o modelo enviar em rajadas.
+    const target = { value: '' };
+    let shown = 0;
+    let done = false;
+    let failed: string | null = null;
+
+    const finish = () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      setBusy(false);
+      if (failed) {
+        setError(failed);
+        setMessages((prev) => {
+          const last = prev[prev.length - 1];
+          if (last?.role === 'assistant' && last.content === '')
+            return prev.slice(0, -1);
+          return prev;
+        });
+      }
+    };
+
+    timerRef.current = window.setInterval(() => {
+      if (shown < target.value.length) {
+        const remaining = target.value.length - shown;
+        // ~2 caracteres por tick; acelera se estiver muito atrás do stream.
+        const step = remaining > 60 ? Math.ceil(remaining / 15) : 2;
+        shown = Math.min(target.value.length, shown + step);
+        setLastAssistant(target.value.slice(0, shown));
+      } else if (done) {
+        finish();
+      }
+    }, 18);
+
     try {
       await streamAssistant(propertyId, question, history, {
-        onChunk: (chunk) =>
-          setMessages((prev) => {
-            const next = [...prev];
-            const last = next[next.length - 1];
-            next[next.length - 1] = {
-              ...last,
-              content: last.content + chunk,
-            };
-            return next;
-          }),
+        onChunk: (chunk) => {
+          target.value += chunk;
+        },
       });
     } catch (e) {
-      const msg =
+      failed =
         e instanceof ApiError
           ? e.message
           : 'Não foi possível falar com o assistente agora.';
-      setError(msg);
-      // Remove a bolha vazia do assistente, se nada foi recebido.
-      setMessages((prev) => {
-        const last = prev[prev.length - 1];
-        if (last?.role === 'assistant' && last.content === '')
-          return prev.slice(0, -1);
-        return prev;
-      });
     } finally {
-      setBusy(false);
+      done = true;
     }
   }
 
   return (
     <>
-      {/* Botão flutuante */}
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label={open ? 'Fechar assistente' : 'Abrir assistente'}
@@ -84,7 +123,6 @@ export function ChatWidget({
         {open ? '✕' : '💬'}
       </button>
 
-      {/* Painel do chat */}
       {open && (
         <div className="fixed bottom-24 right-5 z-50 flex h-[32rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
           <header className="bg-brand-600 px-4 py-3 text-white">
@@ -117,23 +155,31 @@ export function ChatWidget({
               </div>
             )}
 
-            {messages.map((m, i) => (
-              <div
-                key={i}
-                className={m.role === 'user' ? 'text-right' : 'text-left'}
-              >
-                <span
-                  className={`inline-block max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${
-                    m.role === 'user'
-                      ? 'bg-brand-600 text-white'
-                      : 'border border-slate-200 bg-white text-slate-800'
-                  }`}
+            {messages.map((m, i) => {
+              const isLast = i === messages.length - 1;
+              const typing = busy && isLast && m.role === 'assistant';
+              return (
+                <div
+                  key={i}
+                  className={m.role === 'user' ? 'text-right' : 'text-left'}
                 >
-                  {m.content ||
-                    (busy && i === messages.length - 1 ? '…' : '')}
-                </span>
-              </div>
-            ))}
+                  <span
+                    className={`inline-block max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${
+                      m.role === 'user'
+                        ? 'bg-brand-600 text-white'
+                        : 'border border-slate-200 bg-white text-slate-800'
+                    }`}
+                  >
+                    {m.content === '' && typing ? '…' : m.content}
+                    {typing && m.content !== '' && (
+                      <span className="ml-0.5 inline-block animate-pulse">
+                        ▍
+                      </span>
+                    )}
+                  </span>
+                </div>
+              );
+            })}
 
             {error && (
               <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">

@@ -25,7 +25,8 @@ export class AssistantController {
 
   @Post()
   @ApiOperation({
-    summary: 'Conversa com o assistente virtual do imóvel (resposta em streaming)',
+    summary:
+      'Conversa com o assistente virtual do imóvel (resposta em streaming)',
     description:
       'Recebe a pergunta do hóspede e devolve a resposta da IA em streaming (text/plain, chunks progressivos). O assistente responde apenas com base nos dados do imóvel e no guia de experiências.',
   })
